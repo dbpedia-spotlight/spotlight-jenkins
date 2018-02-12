@@ -1,0 +1,36 @@
+#!groovy
+
+pipeline {
+
+	environment {
+		WIKI_MIRROR =  "https://dumps.wikimedia.org/"
+		LANGUAGE = "${env.LANGUAGE}"
+		WDIR =  "/model-quickstarter/wdir"
+		HOME_HOST = "${env.HOME_HOST}"
+		LOCALE = "${env.LOCALE}"
+                LANGUAGE_STEMMER = "${env.LANGUAGE_STEMMER}"
+	}
+
+	agent {
+		docker { 
+			image 'dbpediaspotlight/model-quickstarter:latest' 
+			args '-v ${HOME_HOST}/wikistatsextractor/wdir:/model-quickstarter/wdir -v ${HOME_HOST}/wikistatsextractor/data:/model-quickstarter/data -v ${HOME_HOST}/wikistatsextractor/models:/model-quickstarter/models -v ${HOME_HOST}/wikistatsextractor/?/:/wikistatsextractor/?/'
+			reuseNode true
+		}
+	}
+
+   stages {
+ 
+        stage('wikipedia dump download') { 
+            steps {
+               sh 'cd ${WDIR} && mkdir -p ${LANGUAGE} && cd ${LANGUAGE} && wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 "$WIKI_MIRROR/${LANGUAGE}wiki/latest/${LANGUAGE}wiki-latest-pages-articles.xml.bz2" && bzcat ${LANGUAGE}wiki-latest-pages-articles.xml.bz2 > dump.xml'
+            }
+        } 
+ 
+        stage('wikistatsextractor ') {
+            steps {
+                sh 'cd /wikistatsextractor && mvn install exec:java -Dexec.args="--output_folder ${WDIR}/${LANGUAGE} ${LANGUAGE} ${LOCALE} ${LANGUAGE_STEMMER}Stemmer ${WDIR}/${LANGUAGE}/dump.xml /model-quickstarter/${LANGUAGE}/stopwords.list"'
+            }
+        }
+    }
+}
