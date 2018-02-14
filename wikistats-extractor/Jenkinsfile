@@ -1,0 +1,62 @@
+#!groovy
+
+pipeline {
+
+    environment {
+        WIKI_MIRROR = "https://dumps.wikimedia.org/"
+        LANGUAGE = "${env.LANGUAGE}"
+        WDIR = "/wdir"
+        HOME_HOST = "${env.HOME_HOST}"
+        LOCALE = "${env.LOCALE}"
+        LANGUAGE_STEMMER = "${env.LANGUAGE_STEMMER}"
+    }
+
+    agent {
+        docker {
+            image 'maven:3-jdk-8'
+            args '-v ${HOME_HOST}/wikistats/:/wdir -v /etc/group:/etc/group:ro -v /etc/passwd:/etc/passwd:ro -v /var/lib/jenkins:/var/lib/jenkins'
+            reuseNode true
+        }
+    }
+
+    stages {
+
+        stage('cloning spotlight') {
+            steps {
+                sh 'cd /tmp && git clone --depth=1 --branch=master https://github.com/dbpedia-spotlight/dbpedia-spotlight-model.git && cd /tmp/dbpedia-spotlight-model && mvn install'
+            }
+        }
+
+        stage('cloning wikistats') {
+            steps {
+                sh 'cd /tmp && git config --global core.filemode false && git clone --depth=1 --branch=master https://github.com/dbpedia-spotlight/wikistatsextractor.git && cd /tmp/wikistatsextractor && mvn install'
+            }
+        }
+
+
+        stage('cloning model quickstarter') {
+            steps {
+                sh 'cd /tmp && git clone --depth=1 --branch=master https://github.com/dbpedia-spotlight/model-quickstarter.git'
+            }
+        }
+
+
+        stage('downloading wikipedia dump') {
+            steps {
+                sh 'cd ${WDIR} && mkdir -p ${LANGUAGE} && cd ${LANGUAGE} && wget -nc --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 "$WIKI_MIRROR/${LANGUAGE}wiki/latest/${LANGUAGE}wiki-latest-pages-articles.xml.bz2"'
+            }
+        }
+
+        stage('unpacking wikipedia dump') {
+            steps {
+                sh 'if [[ ! -e "dump.xml" ]]; then cd ${WDIR}/${LANGUAGE} && bzcat ${LANGUAGE}wiki-latest-pages-articles.xml.bz2 > dump.xml; fi'
+            }
+        }
+
+        stage('wikistats extraction') {
+            steps {
+                sh 'cd /tmp/wikistatsextractor && mvn exec:java -Dexec.args="--output_folder ${WDIR}/${LANGUAGE} ${LANGUAGE} ${LOCALE} ${LANGUAGE_STEMMER}Stemmer ${WDIR}/${LANGUAGE}/dump.xml /tmp/model-quickstarter/${LANGUAGE}/stopwords.list"'
+            }
+        }
+    }
+}

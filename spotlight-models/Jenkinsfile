@@ -1,0 +1,148 @@
+#!groovy
+
+pipeline {
+
+    environment {
+        DBPEDIA_VERSION =  "${env.VERSION}"
+        DBPEDIA_MIRROR = "http://downloads.dbpedia.org/${DBPEDIA_VERSION}/core-i18n"
+        WIKI_MIRROR = "https://dumps.wikimedia.org/"
+        OPENNLP_MIRROR = "http://opennlp.sourceforge.net/models-1.5/"
+        LANGUAGE = "${env.LANGUAGE}"
+        WDIR = "/wdir"
+        HOME_HOST = "${env.HOME_HOST}"
+        LOCALE = "${env.LOCALE}"
+        LANGUAGE_STEMMER = "${env.LANGUAGE_STEMMER}"
+    }
+
+    agent {
+        docker {
+            image 'maven:3-jdk-8'
+            args '-v ${HOME_HOST}/wikistats/:/wdir -v /etc/group:/etc/group:ro -v /etc/passwd:/etc/passwd:ro -v /var/lib/jenkins:/var/lib/jenkins'
+            reuseNode true
+        }
+    }
+
+    stages {
+
+        stage('cloning spotlight') {
+            steps {
+                sh 'cd /tmp && git clone --depth=1 --branch=master https://github.com/dbpedia-spotlight/dbpedia-spotlight-model.git && cd /tmp/dbpedia-spotlight-model && mvn install'
+            }
+        }
+
+        stage('cloning wikistats') {
+            steps {
+                sh 'cd /tmp && git config --global core.filemode false && git clone --depth=1 --branch=master https://github.com/dbpedia-spotlight/wikistatsextractor.git && cd /tmp/wikistatsextractor && mvn install'
+            }
+        }
+
+
+        stage('cloning model quickstarter') {
+            steps {
+                sh 'cd /tmp && git clone --depth=1 --branch=master https://github.com/dbpedia-spotlight/model-quickstarter.git'
+            }
+        }
+
+        stage('downloading dbpedia disambiguations') {
+            steps {
+                sh 'mkdir -p ${WDIR}/${LANGUAGE} && cd ${WDIR}/${LANGUAGE} && wget -nc --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 "$DBPEDIA_MIRROR/${LANGUAGE}/disambiguations_${LANGUAGE}.ttl.bz2" || true'
+            }
+        }
+
+        stage('downloading dbpedia instance types') {
+            steps {
+                sh 'cd ${WDIR}/${LANGUAGE} && wget -nc --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 "$DBPEDIA_MIRROR/${LANGUAGE}/instance_types_${LANGUAGE}.ttl.bz2"'
+            }
+        }
+
+        stage('downloading dbpedia instance transitives types') {
+            steps {
+                sh 'cd ${WDIR}/${LANGUAGE} && wget -nc --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 "$DBPEDIA_MIRROR/${LANGUAGE}/instance_types_transitive_${LANGUAGE}.ttl.bz2"'
+            }
+        }
+
+        stage('downloading dbpedia redirects') {
+            steps {
+                sh 'cd ${WDIR}/${LANGUAGE} && wget -nc --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 "$DBPEDIA_MIRROR/${LANGUAGE}/redirects_${LANGUAGE}.ttl.bz2"  || true'
+            }
+        }
+
+        stage('downloading wikipedia dump') {
+            steps {
+                sh 'cd ${WDIR}/${LANGUAGE} && wget -nc --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 "$WIKI_MIRROR/${LANGUAGE}wiki/latest/${LANGUAGE}wiki-latest-pages-articles.xml.bz2"'
+            }
+        }
+
+        stage('downloading token.bin') {
+            steps {
+                sh 'mkdir -p ${WDIR}/${LANGUAGE}/opennlp && cd ${WDIR}/${LANGUAGE}/opennlp && wget -nc --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 "$OPENNLP_MIRROR/${LANGUAGE}-token.bin" -O token.bin || true'
+            }
+        }
+
+        stage('downloading sent.bin') {
+            steps {
+                sh 'cd ${WDIR}/${LANGUAGE}/opennlp && wget -nc --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 "$OPENNLP_MIRROR/${LANGUAGE}-sent.bin" -O sent.bin || true'
+            }
+        }
+
+        stage('downloading pos-maxent.bin') {
+            steps {
+                sh 'cd ${WDIR}/${LANGUAGE}/opennlp && wget -nc --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 "$OPENNLP_MIRROR/${LANGUAGE}-pos-maxent.bin" -O pos-maxent.bin || true'
+            }
+        }
+
+        stage('downloading chunker.bin') {
+            steps {
+                sh 'cd ${WDIR}/${LANGUAGE}/opennlp && wget -nc --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 "$OPENNLP_MIRROR/${LANGUAGE}-chunker.bin" -O chunker.bin || true'
+            }
+        }
+
+        stage('unpacking wikipedia dump') {
+            steps {
+                sh 'if [[ ! -e "dump.xml" ]]; then bzcat ${LANGUAGE}wiki-latest-pages-articles.xml.bz2 > dump.xml; fi'
+            }
+        }
+
+        stage('unpacking dbpedia disambiguations') {
+            steps {
+                sh 'bzcat ${WDIR}/${LANGUAGE}/disambiguations_${LANGUAGE}.ttl.bz2 > ${WDIR}/${LANGUAGE}/disambiguations.nt || true'
+            }
+        }
+
+        stage('unpacking dbpedia instance types') {
+            steps {
+                sh 'bzcat ${WDIR}/${LANGUAGE}/instance_types_${LANGUAGE}.ttl.bz2 > ${WDIR}/${LANGUAGE}/instance_types.tmp'
+            }
+        }
+
+        stage('unpacking dbpedia instance transitives types') {
+            steps {
+                sh 'bzcat ${WDIR}/${LANGUAGE}/instance_types_transitive_${LANGUAGE}.ttl.bz2 > ${WDIR}/${LANGUAGE}/instance_types_transitive.tmp'
+            }
+        }
+
+        stage('unpacking dbpedia redirects') {
+            steps {
+                sh 'bzcat ${WDIR}/${LANGUAGE}/redirects_${LANGUAGE}.ttl.bz2 > ${WDIR}/${LANGUAGE}/redirects.nt'
+            }
+        }
+
+        stage('merge types') {
+            steps {
+                sh 'cat ${WDIR}/${LANGUAGE}/instance_types_transitive.tmp >> ${WDIR}/${LANGUAGE}/instance_types.tmp && cat ${WDIR}/${LANGUAGE}/instance_types.tmp | sort >  ${WDIR}/${LANGUAGE}/instance_types.nt'
+            }
+        }
+
+        stage('wikistats extraction') {
+            steps {
+                sh 'cd /tmp/wikistatsextractor && mvn exec:java -Dexec.args="--output_folder ${WDIR}/${LANGUAGE} ${LANGUAGE} ${LOCALE} ${LANGUAGE_STEMMER}Stemmer ${WDIR}/${LANGUAGE}/dump.xml /tmp/model-quickstarter/${LANGUAGE}/stopwords.list"'
+            }
+        }
+
+        stage('spotlight extraction') {
+            steps {
+                sh 'cd /tmp/dbpedia-spotlight-model && mvn -pl index exec:java -Dexec.mainClass=org.dbpedia.spotlight.db.CreateSpotlightModel -Dexec.args="${LOCALE} ${WDIR}/${LANGUAGE} ${WDIR}/${LANGUAGE}/model ${WDIR}/${LANGUAGE}/opennlp /tmp/model-quickstarter/${LANGUAGE}/stopwords.list ${LANGUAGE_STEMMER}Stemmer"'
+            }
+        }
+    }
+}
