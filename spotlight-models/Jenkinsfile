@@ -12,12 +12,13 @@ pipeline {
         HOME_HOST = "${env.HOME_HOST}"
         LOCALE = "${env.LOCALE}"
         LANGUAGE_STEMMER = "${env.LANGUAGE_STEMMER}"
+        OPENNLP_WDIR = "None"
     }
 
     agent {
         docker {
             image 'maven:3-jdk-8'
-            args '-v ${HOME_HOST}/wikistats/:/wdir -v /etc/group:/etc/group:ro -v /etc/passwd:/etc/passwd:ro -v /var/lib/jenkins:/var/lib/jenkins'
+            args '-v ${HOME_HOST}/model/:/wdir -v /etc/group:/etc/group:ro -v /etc/passwd:/etc/passwd:ro -v /var/lib/jenkins:/var/lib/jenkins'
             reuseNode true
         }
     }
@@ -76,30 +77,42 @@ pipeline {
         stage('downloading token.bin') {
             steps {
                 sh 'mkdir -p ${WDIR}/${LANGUAGE}/opennlp && cd ${WDIR}/${LANGUAGE}/opennlp && wget -nc --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 "$OPENNLP_MIRROR/${LANGUAGE}-token.bin" -O token.bin || true'
+                sh 'if [ $(du -sb ${WDIR}/${LANGUAGE}/opennlp/token.bin| cut -f1) -gt 200 ]; then rm ${WDIR}/${LANGUAGE}/opennlp/token.bin ; fi '
             }
         }
 
         stage('downloading sent.bin') {
             steps {
                 sh 'cd ${WDIR}/${LANGUAGE}/opennlp && wget -nc --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 "$OPENNLP_MIRROR/${LANGUAGE}-sent.bin" -O sent.bin || true'
+                sh 'if [ $(du -sb ${WDIR}/${LANGUAGE}/opennlp/sent.bin| cut -f1) -gt 200 ]; then rm ${WDIR}/${LANGUAGE}/opennlp/sent.bin ; fi '
             }
         }
 
         stage('downloading pos-maxent.bin') {
             steps {
                 sh 'cd ${WDIR}/${LANGUAGE}/opennlp && wget -nc --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 "$OPENNLP_MIRROR/${LANGUAGE}-pos-maxent.bin" -O pos-maxent.bin || true'
+                sh 'if [ $(du -sb ${WDIR}/${LANGUAGE}/opennlp/pos-maxent.bin | cut -f1) -gt 200 ]; then rm ${WDIR}/${LANGUAGE}/opennlp/pos-maxent.bin ; fi '
             }
         }
 
         stage('downloading chunker.bin') {
             steps {
                 sh 'cd ${WDIR}/${LANGUAGE}/opennlp && wget -nc --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 "$OPENNLP_MIRROR/${LANGUAGE}-chunker.bin" -O chunker.bin || true'
+                sh 'if [ $(du -sb ${WDIR}/${LANGUAGE}/opennlp/chunker.bin | cut -f1) -gt 200 ]; then rm ${WDIR}/${LANGUAGE}/opennlp/chunker.bin ; fi '
             }
         }
 
+
+        stage('check opennlp') {
+            steps {
+                sh 'if [ $(du -sb ${WDIR}/${LANGUAGE}/opennlp/ | cut -f1) -gt 200 ]; then rm ${WDIR}/${LANGUAGE}/opennlp/ -r && export OPENNLP_WDIR="None" ; fi '
+            }
+        }
+
+
         stage('unpacking wikipedia dump') {
             steps {
-                sh 'if [[ ! -e "dump.xml" ]]; then bzcat ${LANGUAGE}wiki-latest-pages-articles.xml.bz2 > dump.xml; fi'
+                sh 'if [ ! -e "${WDIR}/${LANGUAGE}/dump.xml" ]; then bzcat ${WDIR}/${LANGUAGE}/${LANGUAGE}wiki-latest-pages-articles.xml.bz2 > dump.xml; fi'
             }
         }
 
@@ -141,7 +154,7 @@ pipeline {
 
         stage('spotlight extraction') {
             steps {
-                sh 'cd /tmp/dbpedia-spotlight-model && mvn -pl index exec:java -Dexec.mainClass=org.dbpedia.spotlight.db.CreateSpotlightModel -Dexec.args="${LOCALE} ${WDIR}/${LANGUAGE} ${WDIR}/${LANGUAGE}/model ${WDIR}/${LANGUAGE}/opennlp /tmp/model-quickstarter/${LANGUAGE}/stopwords.list ${LANGUAGE_STEMMER}Stemmer"'
+                sh 'if [ -d "${WDIR}/${LANGUAGE}/opennlp" ]; then OPENNLP_WDIR="${WDIR}/${LANGUAGE}/opennlp"; fi && cd /tmp/dbpedia-spotlight-model && mvn -pl index exec:java -Dexec.mainClass=org.dbpedia.spotlight.db.CreateSpotlightModel -Dexec.args="${LOCALE} ${WDIR}/${LANGUAGE} ${WDIR}/${LANGUAGE}/model ${OPENNLP_WDIR} /tmp/model-quickstarter/${LANGUAGE}/stopwords.list ${LANGUAGE_STEMMER}Stemmer"'
             }
         }
     }

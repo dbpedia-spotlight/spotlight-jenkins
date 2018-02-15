@@ -49,7 +49,7 @@ pipeline {
 
         stage('unpacking wikipedia dump') {
             steps {
-                sh 'if [[ ! -e "dump.xml" ]]; then cd ${WDIR}/${LANGUAGE} && bzcat ${LANGUAGE}wiki-latest-pages-articles.xml.bz2 > dump.xml; fi'
+                sh 'if [ ! -e "dump.xml" ]; then cd ${WDIR}/${LANGUAGE} && bzcat ${LANGUAGE}wiki-latest-pages-articles.xml.bz2 > dump.xml; fi'
             }
         }
 
