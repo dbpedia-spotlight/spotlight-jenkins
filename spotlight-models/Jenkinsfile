@@ -154,7 +154,7 @@ pipeline {
 
         stage('spotlight extraction') {
             steps {
-                sh 'if [ -d "${WDIR}/${LANGUAGE}/opennlp" ]; then OPENNLP_WDIR="${WDIR}/${LANGUAGE}/opennlp"; fi && cd /tmp/dbpedia-spotlight-model && mvn -pl index exec:java -Dexec.mainClass=org.dbpedia.spotlight.db.CreateSpotlightModel -Dexec.args="${LOCALE} ${WDIR}/${LANGUAGE} ${WDIR}/${LANGUAGE}/model ${OPENNLP_WDIR} /tmp/model-quickstarter/${LANGUAGE}/stopwords.list ${LANGUAGE_STEMMER}Stemmer"'
+                sh 'if [ -d "${WDIR}/${LANGUAGE}/opennlp" ]; then OPENNLP_WDIR="${WDIR}/${LANGUAGE}/opennlp"; fi && cd /tmp/dbpedia-spotlight-model && mvn -pl index exec:java -Xms20g -Xmx20g -Dexec.mainClass=org.dbpedia.spotlight.db.CreateSpotlightModel -Dexec.args="${LOCALE} ${WDIR}/${LANGUAGE} ${WDIR}/${LANGUAGE}/model ${OPENNLP_WDIR} /tmp/model-quickstarter/${LANGUAGE}/stopwords.list ${LANGUAGE_STEMMER}Stemmer"'
             }
         }
     }
