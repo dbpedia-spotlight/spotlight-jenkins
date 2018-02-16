@@ -9,7 +9,7 @@ pipeline {
         OPENNLP_MIRROR = "http://opennlp.sourceforge.net/models-1.5/"
         LANGUAGE = "${env.LANGUAGE}"
         WDIR = "/wdir"
-        HOME_HOST = "${env.HOME_HOST}"
+        HOME_HOST_PATH = "${env.HOME_HOST_PATH}"
         LOCALE = "${env.LOCALE}"
         LANGUAGE_STEMMER = "${env.LANGUAGE_STEMMER}"
         OPENNLP_WDIR = "None"
@@ -19,7 +19,7 @@ pipeline {
     agent {
         docker {
             image 'maven:3-jdk-8'
-            args '-v ${HOME_HOST}/model/:/wdir -v /etc/group:/etc/group:ro -v /etc/passwd:/etc/passwd:ro -v /var/lib/jenkins:/var/lib/jenkins'
+            args '-v ${HOME_HOST_PATH}:/wdir -v /etc/group:/etc/group:ro -v /etc/passwd:/etc/passwd:ro -v /var/lib/jenkins:/var/lib/jenkins'
             reuseNode true
         }
     }
