@@ -13,6 +13,7 @@ pipeline {
         LOCALE = "${env.LOCALE}"
         LANGUAGE_STEMMER = "${env.LANGUAGE_STEMMER}"
         OPENNLP_WDIR = "None"
+        MAVEN_OPTS = ' -Xms20g -Xmx20g'
     }
 
     agent {
