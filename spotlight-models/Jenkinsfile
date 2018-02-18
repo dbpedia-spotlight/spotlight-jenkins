@@ -47,25 +47,25 @@ pipeline {
 
         stage('downloading dbpedia disambiguations') {
             steps {
-                sh 'mkdir -p ${WDIR}/${LANGUAGE} && cd ${WDIR}/${LANGUAGE} && wget -nc --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 "$DBPEDIA_MIRROR/${LANGUAGE}/disambiguations_${LANGUAGE}.ttl.bz2" || true'
+                sh 'mkdir -p ${WDIR}/${LANGUAGE} && cd ${WDIR}/${LANGUAGE} && wget -nc --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 -o disambiguations_${LANGUAGE}.ttl.bz2 "$DBPEDIA_MIRROR/${LANGUAGE}/disambiguations_${LANGUAGE}.ttl.bz2" || true'
             }
         }
 
         stage('downloading dbpedia instance types') {
             steps {
-                sh 'cd ${WDIR}/${LANGUAGE} && wget -nc --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 "$DBPEDIA_MIRROR/${LANGUAGE}/instance_types_${LANGUAGE}.ttl.bz2"'
+                sh 'cd ${WDIR}/${LANGUAGE} && wget -nc --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 -o instance_types_${LANGUAGE}.ttl.bz2 "$DBPEDIA_MIRROR/${LANGUAGE}/instance_types_${LANGUAGE}.ttl.bz2"'
             }
         }
 
         stage('downloading dbpedia instance transitives types') {
             steps {
-                sh 'cd ${WDIR}/${LANGUAGE} && wget -nc --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 "$DBPEDIA_MIRROR/${LANGUAGE}/instance_types_transitive_${LANGUAGE}.ttl.bz2"'
+                sh 'cd ${WDIR}/${LANGUAGE} && wget -nc --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 -o instance_types_transitive_${LANGUAGE}.ttl.bz2 "$DBPEDIA_MIRROR/${LANGUAGE}/instance_types_transitive_${LANGUAGE}.ttl.bz2"'
             }
         }
 
         stage('downloading dbpedia redirects') {
             steps {
-                sh 'cd ${WDIR}/${LANGUAGE} && wget -nc --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 "$DBPEDIA_MIRROR/${LANGUAGE}/redirects_${LANGUAGE}.ttl.bz2"  || true'
+                sh 'cd ${WDIR}/${LANGUAGE} && wget -nc --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 -o redirects_${LANGUAGE}.ttl.bz2 "$DBPEDIA_MIRROR/${LANGUAGE}/redirects_${LANGUAGE}.ttl.bz2"  || true'
             }
         }
 
