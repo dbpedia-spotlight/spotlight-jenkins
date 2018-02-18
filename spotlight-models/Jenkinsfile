@@ -125,19 +125,19 @@ pipeline {
 
         stage('unpacking dbpedia instance types') {
             steps {
-                sh 'bzcat ${WDIR}/${LANGUAGE}/instance_types_${LANGUAGE}.ttl.bz2 > ${WDIR}/${LANGUAGE}/instance_types.tmp'
+                sh 'bzcat ${WDIR}/${LANGUAGE}/instance_types_${LANGUAGE}.ttl.bz2 > ${WDIR}/${LANGUAGE}/instance_types.tmp  || true'
             }
         }
 
         stage('unpacking dbpedia instance transitives types') {
             steps {
-                sh 'bzcat ${WDIR}/${LANGUAGE}/instance_types_transitive_${LANGUAGE}.ttl.bz2 > ${WDIR}/${LANGUAGE}/instance_types_transitive.tmp'
+                sh 'bzcat ${WDIR}/${LANGUAGE}/instance_types_transitive_${LANGUAGE}.ttl.bz2 > ${WDIR}/${LANGUAGE}/instance_types_transitive.tmp  || true'
             }
         }
 
         stage('unpacking dbpedia redirects') {
             steps {
-                sh 'bzcat ${WDIR}/${LANGUAGE}/redirects_${LANGUAGE}.ttl.bz2 > ${WDIR}/${LANGUAGE}/redirects.nt'
+                sh 'bzcat ${WDIR}/${LANGUAGE}/redirects_${LANGUAGE}.ttl.bz2 > ${WDIR}/${LANGUAGE}/redirects.nt  || true'
             }
         }
 
