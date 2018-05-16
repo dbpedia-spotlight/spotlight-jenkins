@@ -30,8 +30,6 @@ Swedish      | 2016-10      | sv           | a path            | sv_SE    | Swed
 Turkish      | 2016-19      | tr           | a path            | tr_TR    | Turkish
 
 
-Our live Jenkins is at http://jenkins.dbpedia-spotlight.org
-
 
 ## Licenses
 
